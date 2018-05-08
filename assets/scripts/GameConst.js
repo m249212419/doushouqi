@@ -1,3 +1,10 @@
+if (!Array.prototype.shuffle) {
+    Array.prototype.shuffle = function() {
+        for(var j, x, i = this.length; i; j = parseInt(Math.random() * i), x = this[--i], this[i] = this[j], this[j] = x);
+        return this;
+    };
+}
+
 
 //游戏状态
 var GameState = {
@@ -41,12 +48,12 @@ var PlayerType = {
 //游戏倒计时
 var DelayTime = 20;
 
-exports.gameConst = {
+module.exports = {
     gameState: GameState,
     cardState: CardState,
     cardType: CardType,
     getCardData: function(){
-        return CardData.clone();
+        return CardData;
     },
 
     playerType: PlayerType,

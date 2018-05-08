@@ -33,7 +33,7 @@ cc.Class({
     },
 
     start() {
-        
+        this.gameStart();
     },
 
     update(dt) {
@@ -69,10 +69,15 @@ cc.Class({
      */
     gameStart() {
         //设置玩家信息，确认红蓝双方
-
+        this.setPlayerInfo();
         //重置卡牌数据
-
-        //显示开始提示
+        this.resetCardData();
+        /**
+         * 显示开始提示
+         * 1.随机先手玩家
+         * 2.提示先手
+         */
+        
     },
 
     /**
@@ -86,14 +91,17 @@ cc.Class({
      * 重置卡牌数据
      */
     resetCardData(){
-        
+        var cardData = this.randomCardData();
+        console.log(cardData);
     },
 
     /**
      * 随机卡牌 数据
      */
     randomCardData(){
-
+        var cardData = gameConst.getCardData();
+        cardData.shuffle();
+        return cardData;
     },
 
     /**
