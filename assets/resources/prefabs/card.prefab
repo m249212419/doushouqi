@@ -1063,7 +1063,39 @@
     "node": {
       "__id__": 1
     },
-    "_enabled": true
+    "_enabled": true,
+    "cardBg": {
+      "__id__": 31
+    },
+    "cardBack": {
+      "__id__": 11
+    },
+    "animal": {
+      "__id__": 3
+    },
+    "animalName": {
+      "__id__": 6
+    },
+    "selectTag": {
+      "__id__": 14
+    },
+    "orientations": [
+      {
+        "__id__": 18
+      },
+      {
+        "__id__": 21
+      },
+      {
+        "__id__": 24
+      },
+      {
+        "__id__": 27
+      }
+    ],
+    "winTag": {
+      "__id__": 8
+    }
   },
   {
     "__type__": "cc.PrefabInfo",

@@ -5,6 +5,16 @@ cc.Class({
     extends: cc.Component,
 
     properties: {
+        cardBg: cc.Sprite,
+        cardBack: cc.Node,
+        animal: cc.Sprite,
+        animalName: cc.Sprite,
+        selectTag: cc.Node,
+        orientations: [cc.Node],
+        winTag: cc.Node
+    },
+
+    onLoad() {
         
     },
 
