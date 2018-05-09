@@ -5,7 +5,6 @@ cc.Class({
     extends: cc.Component,
 
     properties: {
-        cardBg: cc.Sprite,
         cardBack: cc.Node,
         animal: cc.Sprite,
         animalName: cc.Sprite,
@@ -36,6 +35,13 @@ cc.Class({
 
     showCanMoveOrientation(orientations) {
 
+    },
+
+    shake() {
+        var shake = this.node.getComponent("Shake");
+        shake.shake(()=>{
+            this.cardBack.active = false;
+        });
     }
 
 

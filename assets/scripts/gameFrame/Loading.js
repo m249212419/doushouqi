@@ -1,41 +1,62 @@
-// Learn cc.Class:
-//  - [Chinese] http://docs.cocos.com/creator/manual/zh/scripting/class.html
-//  - [English] http://www.cocos2d-x.org/docs/creator/en/scripting/class.html
-// Learn Attribute:
-//  - [Chinese] http://docs.cocos.com/creator/manual/zh/scripting/reference/attributes.html
-//  - [English] http://www.cocos2d-x.org/docs/creator/en/scripting/reference/attributes.html
-// Learn life-cycle callbacks:
-//  - [Chinese] http://docs.cocos.com/creator/manual/zh/scripting/life-cycle-callbacks.html
-//  - [English] http://www.cocos2d-x.org/docs/creator/en/scripting/life-cycle-callbacks.html
 
 cc.Class({
     extends: cc.Component,
 
     properties: {
-        // foo: {
-        //     // ATTRIBUTES:
-        //     default: null,        // The default value will be used only when the component attaching
-        //                           // to a node for the first time
-        //     type: cc.SpriteFrame, // optional, default is typeof default
-        //     serializable: true,   // optional, default is true
-        // },
-        // bar: {
-        //     get () {
-        //         return this._bar;
-        //     },
-        //     set (value) {
-        //         this._bar = value;
-        //     }
-        // },
+        progressBar: {
+            default: null,
+            type: cc.ProgressBar
+        },
     },
 
-    // LIFE-CYCLE CALLBACKS:
+    // use this for initialization
+    onLoad: function () {
+        
+        this.resource = null;
+        this.progressBar.progress = 0;
+        this._clearAll();
+        this.progressTips.textKey = i18n.t("cases/05_scripting/10_loadingBar/LoadingBarCtrl.js.3");
+        this.node.on(cc.Node.EventType.TOUCH_START, function () {
+            if (this.resource) { return; }
+            cc.loader.load(this._urls, this._progressCallback.bind(this), this._completeCallback.bind(this));
+        }, this);
+    },
 
-    // onLoad () {},
+    _clearAll: function () {
+        for (var i = 0; i < this._urls.length; ++i) {
+            var url = this._urls[i];
+            cc.loader.release(url);
+        }
+    },
 
-    start () {
+    _progressCallback: function (completedCount, totalCount, res) {
+        this.progress = completedCount / totalCount;
+        this.resource = res;
+        this.completedCount = completedCount;
+        this.totalCount = totalCount;
+    },
+
+    _completeCallback: function (error, res) {
 
     },
 
-    // update (dt) {},
+    // called every frame, uncomment this function to activate update callback
+    update: function (dt) {
+        if (!this.resource) {
+            return;
+        }
+        var progress = this.progressBar.progress;
+        if (progress >= 1) {
+            this.progressTips.textKey = i18n.t("cases/05_scripting/10_loadingBar/LoadingBarCtrl.js.1");
+            this.laodBg.active = false;
+            this.progressBar.node.active = false;
+            this.enabled = false;
+            return;
+        }
+        if (progress < this.progress) {
+            progress += dt;
+        }
+        this.progressBar.progress = progress;
+        this.progressTips.textKey = i18n.t("cases/05_scripting/10_loadingBar/LoadingBarCtrl.js.2")+ this.resource.id + " (" + this.completedCount + "/" + this.totalCount + ")";
+    }
 });

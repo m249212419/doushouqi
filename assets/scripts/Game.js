@@ -1,6 +1,7 @@
 
 
 var gameConst = require("GameConst");
+var Shake = require("Shake");
 
 cc.Class({
     extends: cc.Component,
@@ -115,7 +116,8 @@ cc.Class({
      * 卡牌被点击
      */
     onCardSelect(event) {
-        console.log(event.target.name);
+        var card = event.target.getComponent('Card');
+        card.shake();
     }
 
 });
