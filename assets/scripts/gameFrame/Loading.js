@@ -7,56 +7,81 @@ cc.Class({
             default: null,
             type: cc.ProgressBar
         },
+
+        progressEffect: {
+            default: null,
+            type: cc.Node
+        },
+
+        progressLabel: {
+            default: null,
+            type: cc.Label
+        }
     },
 
-    // use this for initialization
-    onLoad: function () {
+    /**
+     * 
+     * @param {场景名称} sceneName 
+     * @param {加载完成后回调} onLoaded 
+     */
+    loadScene(sceneName, onLoaded) {
+        this._preloadScene(sceneName, onLoaded);
+    },
+
+    /**
+     * 加载资源(待完成)
+     */
+    loadAssets() {
+
+    },
+
+    /**
+     * 预加载
+     * @param {场景名称} sceneName 
+     * @param {加载完成后回调} onLoaded 
+     */
+    _preloadScene(sceneName, onLoaded) {
+        let info = cc.director._getSceneUuid(sceneName)
+        if (info) {
+            cc.director.emit(cc.Director.EVENT_BEFORE_SCENE_LOADING, sceneName)
+            cc.loader.load(
+                { uuid: info.uuid, type: 'uuid' },
+                (completedCount, totalCount, item) => {
+                    this._updateProgress(completedCount, totalCount)
+                },
+                (error, asset) => {
+                    if (error) {
+                        cc.error(1210, sceneName, error.message);
+                    } else {
+                        cc.director.loadScene(sceneName);
+                    }
+                    if (onLoaded) {
+                        onLoaded(error, asset);
+                    }
+                }
+            )
+        } else {
+            cc.error('Error PreloadScene: ' + sceneName);
+        }
+    },
+
+    /**
+     * 更新进度
+     * @param {完成数量} completedCount 
+     * @param {总数量} totalCount 
+     */
+    _updateProgress(completedCount, totalCount) {
+        let step = completedCount / totalCount;
+        this.progressBar.progress = step;
+        if(this.progressEffect){
+            this.progressEffect.x = -643 / 2 + 643 * step;
+        }
+        if(this.progressLabel){
+            // this.progressLabel.string = `${completedCount}/${totalCount}`; 
+            this.progressLabel.string = `${parsInt(step*100)}%`; 
+        }
         
-        this.resource = null;
-        this.progressBar.progress = 0;
-        this._clearAll();
-        this.progressTips.textKey = i18n.t("cases/05_scripting/10_loadingBar/LoadingBarCtrl.js.3");
-        this.node.on(cc.Node.EventType.TOUCH_START, function () {
-            if (this.resource) { return; }
-            cc.loader.load(this._urls, this._progressCallback.bind(this), this._completeCallback.bind(this));
-        }, this);
-    },
-
-    _clearAll: function () {
-        for (var i = 0; i < this._urls.length; ++i) {
-            var url = this._urls[i];
-            cc.loader.release(url);
-        }
-    },
-
-    _progressCallback: function (completedCount, totalCount, res) {
-        this.progress = completedCount / totalCount;
-        this.resource = res;
-        this.completedCount = completedCount;
-        this.totalCount = totalCount;
-    },
-
-    _completeCallback: function (error, res) {
-
-    },
-
-    // called every frame, uncomment this function to activate update callback
-    update: function (dt) {
-        if (!this.resource) {
-            return;
-        }
-        var progress = this.progressBar.progress;
-        if (progress >= 1) {
-            this.progressTips.textKey = i18n.t("cases/05_scripting/10_loadingBar/LoadingBarCtrl.js.1");
-            this.laodBg.active = false;
-            this.progressBar.node.active = false;
-            this.enabled = false;
-            return;
-        }
-        if (progress < this.progress) {
-            progress += dt;
-        }
-        this.progressBar.progress = progress;
-        this.progressTips.textKey = i18n.t("cases/05_scripting/10_loadingBar/LoadingBarCtrl.js.2")+ this.resource.id + " (" + this.completedCount + "/" + this.totalCount + ")";
     }
+
+
 });
