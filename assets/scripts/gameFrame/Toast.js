@@ -1,24 +1,40 @@
 
+var ShowType = cc.Enum({
+    FadeOut: 1
+});
+
+const UILoader = require("./UILoader");
+
 cc.Class({
     extends: cc.Component,
 
     properties: {
-        txtLabel: cc.Label
+        content: cc.Label,
+        showTime: 1,
+        actionTime: 1,
+        showPos: cc.v2(410, 780),
+        showType: {
+            default: ShowType.FadeOut,
+            type: ShowType
+        },
     },
 
-    showFadeOut(txt, dt, pos) {
-        if(!dt){
-
+    show(txt) {
+        if(this.showType == ShowType.FadeOut){
+            this.showFadeOut(txt);
         }
-        txtLabel.string = txt;
     },
 
-    showDown(txt, dt) {
-        if(!dt){
-
-        }
-        txtLabel.string = txt;
-    }
+    showFadeOut(txt) {
+        this.node.x = this.showPos.x;
+        this.node.y = this.showPos.y;
+        this.content.string = txt;
+        this.node.runAction(cc.sequence(cc.delayTime(this.showTime), 
+            cc.fadeOut(this.actionTime), 
+            cc.callFunc(()=>{
+                UILoader.destroy(this.node);
+            })));
+    },
 
 
 });
