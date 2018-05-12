@@ -1055,7 +1055,7 @@
     "_position": {
       "__type__": "cc.Vec2",
       "x": 0,
-      "y": 560
+      "y": 585
     },
     "_skewX": 0,
     "_skewY": 0,
@@ -2339,7 +2339,7 @@
     "_isSystemFontUsed": true,
     "_spacingX": 0,
     "_N$string": "小蓝",
-    "_N$horizontalAlign": 0,
+    "_N$horizontalAlign": 2,
     "_N$verticalAlign": 1,
     "_N$fontFamily": "Arial",
     "_N$overflow": 1

@@ -19,19 +19,22 @@ cc.Class({
         },
     },
 
-    show(txt) {
+    show(txt, callback) {
         if(this.showType == ShowType.FadeOut){
-            this.showFadeOut(txt);
+            this.showFadeOut(txt, callback);
         }
     },
 
-    showFadeOut(txt) {
+    showFadeOut(txt, callback) {
         this.node.x = this.showPos.x;
         this.node.y = this.showPos.y;
         this.content.string = txt;
         this.node.runAction(cc.sequence(cc.delayTime(this.showTime), 
             cc.fadeOut(this.actionTime), 
             cc.callFunc(()=>{
+                if(callback){
+                    callback();
+                }
                 UILoader.destroy(this.node);
             })));
     },

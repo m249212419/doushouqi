@@ -464,18 +464,6 @@ const UILoader = {
         releaseNodeRes();
     },
 
-    instantiate(prefab, target, callback) {
-        if (!target) {
-            cc.log("参数不对, 请检查参数");
-        }
-        let node_prefab = cc.instantiate(prefab);
-        target.addChild(node_prefab);
-        if(callback){
-            callback(node_prefab);
-        }
-        parserPrefab(node_prefab, 1);
-    },
-
     releaseStaticRes(tag) {
         releaseStaticRes(tag);
     },
@@ -562,7 +550,32 @@ const UILoader = {
             cc.loader.release(cc.loader._cache[ss.target.src].url);
         });
         return audioID;
-    }
+    },
+
+    //方便扩展
+    setSpriteFrame(node, spriteFrameName, callback) {
+        this.loadRes(spriteFrameName, cc.SpriteFrame, (spriteFrame) => {
+            // this.replaceSpriteTexture(node, spriteFrame);
+            node.getComponent(cc.Sprite).spriteFrame = spriteFrame;
+            if(callback){
+                callback(node);
+            }
+        });
+    },
+
+    instantiate(prefabName, target, callback) {
+        if (!target) {
+            cc.log("参数不对, 请检查参数");
+        }
+
+        this.loadRes(prefabName, cc.Prefab, (prefab) => {
+            let node_prefab = cc.instantiate(prefab);
+            target.addChild(node_prefab);
+            if(callback){
+                callback(node_prefab);
+            }
+        });
+    },
 
 
 };

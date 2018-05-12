@@ -1,10 +1,3 @@
-if (!Array.prototype.shuffle) {
-    Array.prototype.shuffle = function() {
-        for(var j, x, i = this.length; i; j = parseInt(Math.random() * i), x = this[--i], this[i] = this[j], this[j] = x);
-        return this;
-    };
-}
-
 
 //游戏状态
 var GameState = {
@@ -21,7 +14,7 @@ var CardState = {
 };
 
 //卡片类型
-var CardType = {
+var AnimalType = {
     Shu: 1,
     Mao: 2,
     Gou: 3,
@@ -45,17 +38,25 @@ var PlayerType = {
     Blue: 2
 }
 
+//移动类型
+var MoveType = {
+    Close: 0,
+    Open: 1,
+    Die: 2
+}
+
 //游戏倒计时
 var DelayTime = 20;
 
 module.exports = {
-    gameState: GameState,
-    cardState: CardState,
-    cardType: CardType,
+    GameState: GameState,
+    CardState: CardState,
+    AnimalType: AnimalType,
     getCardData: function(){
         return CardData;
     },
 
-    playerType: PlayerType,
-    delayTime: DelayTime
+    PlayerType: PlayerType,
+    DelayTime: DelayTime,
+    MoveType: MoveType
 };

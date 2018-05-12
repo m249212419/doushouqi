@@ -9,12 +9,7 @@ cc.Class({
     },
 
     start () {
-        UILoader.loadRes("prefabs/gameToast", cc.Prefab, (prefab) => {
-            UILoader.instantiate(prefab, this.node, (node)=>{
-                var toast = node.getComponent('Toast');
-                toast.show('这是一个Toast');
-            });
-        });
+        
     },
 
     onStartGame(event) {
