@@ -563,14 +563,9 @@ const UILoader = {
         });
     },
 
-    instantiate(prefabName, target, callback) {
-        if (!target) {
-            cc.log("参数不对, 请检查参数");
-        }
-
+    instantiate(prefabName, callback) {
         this.loadRes(prefabName, cc.Prefab, (prefab) => {
             let node_prefab = cc.instantiate(prefab);
-            target.addChild(node_prefab);
             if(callback){
                 callback(node_prefab);
             }

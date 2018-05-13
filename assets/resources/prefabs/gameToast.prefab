@@ -212,7 +212,7 @@
     "content": {
       "__id__": 3
     },
-    "showTime": 1,
+    "showTime": 0.3,
     "actionTime": 0.5,
     "showPos": {
       "__type__": "cc.Vec2",

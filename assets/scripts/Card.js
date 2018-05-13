@@ -27,6 +27,7 @@ cc.Class({
         this.setCardTypeAndValue(cardInfo.type, cardInfo.value);
         this.winTag.active = false;
         this.upTag.active = false;
+        this.node.setLocalZOrder(0);
     },
 
     setCardTypeAndValue(type, value) {
@@ -102,6 +103,7 @@ cc.Class({
     },
 
     showWinTag(callback) {
+        this.node.setLocalZOrder(100);
         var orientation = this.node.getChildByName('orientation');
         orientation.active = false;
         this.upTag.active = false;
