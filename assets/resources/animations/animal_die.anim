@@ -1,0 +1,57 @@
+{
+  "__type__": "cc.AnimationClip",
+  "_name": "animal_die",
+  "_objFlags": 0,
+  "_rawFiles": null,
+  "_duration": 0.3333333333333333,
+  "sample": 60,
+  "speed": 1,
+  "wrapMode": 1,
+  "curveData": {
+    "comps": {
+      "cc.Sprite": {
+        "spriteFrame": [
+          {
+            "frame": 0,
+            "value": {
+              "__uuid__": "00eef956-1db5-49fc-87e4-f756e76259d7"
+            }
+          },
+          {
+            "frame": 0.13333333333333333,
+            "value": {
+              "__uuid__": "f1d4c59c-30ad-4908-a510-26ea2b0bb26b"
+            }
+          },
+          {
+            "frame": 0.25,
+            "value": {
+              "__uuid__": "98155bf1-0a2f-4cb7-8344-8c5b8f65eb4d"
+            }
+          }
+        ]
+      }
+    },
+    "props": {
+      "opacity": [
+        {
+          "frame": 0,
+          "value": 255
+        },
+        {
+          "frame": 0.13333333333333333,
+          "value": 255
+        },
+        {
+          "frame": 0.25,
+          "value": 255
+        },
+        {
+          "frame": 0.3333333333333333,
+          "value": 0
+        }
+      ]
+    }
+  },
+  "events": []
+}

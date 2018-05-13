@@ -10,19 +10,23 @@ cc.Class({
         animalName: cc.Sprite,
         selectTag: cc.Node,
         orientations: [cc.Node],
-        winTag: cc.Node
+        winTag: cc.Node,
+        upTag: cc.Node,
     },
 
     setCardDataByInfo(cardInfo) {
         this.setCardState(cardInfo.state);
         //位置初始化
         this.node.position = cardInfo.initPos;
+        this.node.scale = 1;
         //idx初始化
         this.idx = cardInfo.idx;
         this.setCanSelectState(false);
         var orientation = this.node.getChildByName('orientation');
         orientation.active = false;
         this.setCardTypeAndValue(cardInfo.type, cardInfo.value);
+        this.winTag.active = false;
+        this.upTag.active = false;
     },
 
     setCardTypeAndValue(type, value) {
@@ -57,29 +61,58 @@ cc.Class({
     },
 
     showCanMoveOrientation(orientations) {
-        this.orientations.map((node, idx) => {
-            //value: 0--隐藏 1--显示绿色 2--显示红色
-            var value = orientations[idx];
-            if (value > 0) {
-                UILoader.setSpriteFrame(node, 'image/jiantou_' + value);
-                node.active = true;
-            } else {
-                node.active = false;
-            }
-        });
-
         var orientation = this.node.getChildByName('orientation');
-        orientation.active = true;
+        if (orientations && orientations.length > 0) {
+            this.orientations.map((node, idx) => {
+                //value: 0--隐藏 1--显示绿色 2--显示红色
+                var value = orientations[idx];
+                if (value > 0) {
+                    UILoader.setSpriteFrame(node, 'image/jiantou_' + value);
+                    node.active = true;
+                } else {
+                    node.active = false;
+                }
+            });
+            orientation.active = true;
+        } else {
+            orientation.active = false;
+        }
     },
 
     shake(callback) {
         var shake = this.node.getComponent("Shake");
         shake.shake(() => {
             this.setCardState(gameConst.CardState.CardFace);
-            if(callback){
+            if (callback) {
                 callback();
             }
         });
+    },
+
+    setUpTagVisble(visble) {
+        this.upTag.active = visble;
+    },
+
+    moveToPos(position, callback) {
+        this.node.runAction(cc.sequence(cc.moveTo(0.2, position), cc.callFunc(() => {
+            if (callback) {
+                callback();
+            }
+        })));
+    },
+
+    showWinTag(callback) {
+        var orientation = this.node.getChildByName('orientation');
+        orientation.active = false;
+        this.upTag.active = false;
+        this.winTag.active = true;
+        this.node.runAction(cc.sequence(
+            cc.spawn(cc.moveTo(0.3, cc.v2(0, 0)), cc.scaleTo(0.3, 1.5)),
+            cc.callFunc(() => {
+                if (callback) {
+                    callback();
+                }
+            })));
     }
 
 

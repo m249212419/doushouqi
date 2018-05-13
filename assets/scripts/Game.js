@@ -72,12 +72,8 @@ cc.Class({
         this.gameData.curPlayerType = Math.random2(1, 2);
         this.showFisrtToast();
 
-        if (this.gameData.curPlayerType == this.gameData.user.playerType) {
-            //自己的回合
-        } else {
-            //对方的回合（调用AI）
-
-        }
+        this.selectedCard = null;
+        this.curCard = null;
 
     },
 
@@ -159,7 +155,7 @@ cc.Class({
      * 认输事件
      */
     onRenShuClick() {
-
+        this.gameStart();
     },
 
     /**
@@ -170,31 +166,184 @@ cc.Class({
         if (this.gameData.state != gameConst.GameState.Gaming) {
             return;
         }
+        // if (this.gameData.curPlayerType != this.gameData.user.playerType) {
+        //     //不是自己的回合,不处理
+        //     this.showToast('对手的回合');
+        //     return;
+        // }
 
-        if (this.gameData.curPlayerType != this.gameData.user.playerType) {
-            //不是自己的回合,不处理
-            this.showToast('对手的回合');
-            return;
-        }
         var card = event.target.getComponent('Card');
-        if (card.state == gameConst.CardState.CardFace
-            && card.cardType != this.gameData.curPlayerType) {
-            this.showToast('这是对手的牌');
+        //存在选中的牌
+        if (this.selectedCard) {
+            if (this.selectedCard.idx[0] == card.idx[0] &&
+                this.selectedCard.idx[1] == card.idx[1]) {
+                //同一张牌
+                this.selectedCard.node.setLocalZOrder(0);
+                this.selectedCard.showCanMoveOrientation();
+                this.selectedCard.node.scale = 1;
+                this.selectedCard = null;
+                return;
+            }
+
+
+            var validPos = function () {
+                //判断是否为选中牌的周边牌
+                var cardArr = this.getUpDownLeftRightCard(this.selectedCard);
+
+                for (var i = 0; i < cardArr.length; i++) {
+                    var item = cardArr[i];
+                    if (item) {
+                        if (item.idx[0] == card.idx[0] && item.idx[1] == card.idx[1]) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+
+            var isValidPos = validPos.bind(this)();
+
+            if (isValidPos) {
+                if (card.state == gameConst.CardState.Invalid) {
+                    //交换node
+                    var pos = this.selectedCard.node.position;
+                    this.selectedCard.moveToPos(card.node.position, () => {
+                        card.node.position = pos;
+                        this.selectedCard.node.setLocalZOrder(0);
+                        this.selectedCard.showCanMoveOrientation();
+                        this.selectedCard.node.scale = 1;
+
+                        [this._mapInfo[card.idx[0]][card.idx[1]].node,
+                        this._mapInfo[this.selectedCard.idx[0]][this.selectedCard.idx[1]].node] =
+                            [this.selectedCard.node, card.node];
+
+                        [card.idx, this.selectedCard.idx] = [this.selectedCard.idx, card.idx];
+
+                        this.throwTurn(this.selectedCard);
+                        this.selectedCard = null;
+                    });
+                    return;
+                }
+
+                if (card.state == gameConst.CardState.CardFace
+                    && card.cardType != this.gameData.curPlayerType) {
+
+                    //判断大小：吃牌、自杀、同归于尽
+                    var compareValue = this.compareCard(this.selectedCard, card);
+
+                    var pos = this.selectedCard.node.position;
+
+                    var animationPos = pos;
+                    this.selectedCard.moveToPos(card.node.position, () => {
+
+                        UILoader.instantiate("prefabs/animal_die", this.mapNode, (node) => {
+                            node.position = animationPos;
+                            node.runAction(cc.sequence(cc.delayTime(0.5), cc.callFunc(() => {
+                                UILoader.destroy(node);
+                            })));
+                        });
+
+
+                        var isGameOver = function () {
+                            var validCard = [];
+                            var blueCount = 0;
+                            var redCount = 0;
+                            for (var i = 0; i < 4; i++) {
+                                for (var j = 0; j < 4; j++) {
+                                    var cardInfo = this._mapInfo[i][j];
+                                    var cardScript = this._mapInfo[i][j].node.getComponent('Card');
+                                    if (cardScript.state == gameConst.CardState.Invalid) {
+                                        if (cardScript.cardType == gameConst.PlayerType.Red) {
+                                            redCount++;
+                                        } else {
+                                            blueCount++;
+                                        }
+                                    } else {
+                                        validCard.push(cardScript);
+                                    }
+                                }
+                            }
+                            //游戏结束
+                            if (redCount == 8 || blueCount == 8) {
+                                this.gameData.state = gameConst.GameState.End;
+                                return { over: true, validCard: validCard };
+                            }
+                            return { over: false };
+                        }
+
+                        var winCard = null;
+
+                        if (compareValue == 3) {
+                            this.selectedCard.setCardState(gameConst.CardState.Invalid);
+                            this.selectedCard.node.position = pos;
+                            animationPos = card.node.position;
+
+                            var overIfo = isGameOver.bind(this)()
+                            if (overIfo.over) {
+                                winCard = card;
+                            }
+                        } else if (compareValue == 0) {
+                            this.selectedCard.setCardState(gameConst.CardState.Invalid);
+                            card.setCardState(gameConst.CardState.Invalid);
+                            this.selectedCard.node.position = pos;
+                            animationPos = card.node.position;
+
+                            var overIfo = isGameOver.bind(this)()
+                            if (overIfo.over) {
+                                if (overIfo.validCard.length > 0) {
+                                    winCard = overIfo.validCard[0];
+                                } else {
+                                    winCard = this.selectedCard;
+                                }
+                            }
+                        } else {
+                            card.setCardState(gameConst.CardState.Invalid);
+                            card.node.position = pos;
+                            [this._mapInfo[card.idx[0]][card.idx[1]].node,
+                            this._mapInfo[this.selectedCard.idx[0]][this.selectedCard.idx[1]].node] =
+                                [this.selectedCard.node, card.node];
+
+                            [card.idx, this.selectedCard.idx] = [this.selectedCard.idx, card.idx];
+
+                            animationPos = this.selectedCard.node.position;
+
+                            var overIfo = isGameOver.bind(this)()
+                            if (overIfo.over) {
+                                winCard = this.selectedCard;
+                            }
+                        }
+
+                        this.selectedCard.node.setLocalZOrder(0);
+                        this.selectedCard.showCanMoveOrientation();
+                        this.selectedCard.node.scale = 1;
+                        if (winCard) {
+                            this.gameOver(winCard);
+                        } else {
+                            this.throwTurn(this.selectedCard);
+                            this.selectedCard = null;
+                        }
+
+                    });
+
+                    return;
+                }
+            }
+
+
+            this.showToast('无法移动');
             return;
+        } else {
+            if (card.state == gameConst.CardState.CardFace
+                && card.cardType != this.gameData.curPlayerType) {
+                this.showToast('这是对手的牌');
+                return;
+            }
         }
 
         if (card.state == gameConst.CardState.CardBack) {
-            //变暗所有卡牌
-            for (var i = 0; i < 4; i++) {
-                for (var j = 0; j < 4; j++) {
-                    var cardInfo = this._mapInfo[i][j];
-                    var cardScript = this._mapInfo[i][j].node.getComponent('Card');
-                    cardScript.setCanSelectState(false);
-                }
-            }
             card.shake((() => {
-                this.gameData.curPlayerType = 3 - this.gameData.curPlayerType;
-                this.showToast('对手的回合');
+                this.throwTurn(card);
+                // this.showToast('对手的回合');
             }));
         }
 
@@ -203,28 +352,14 @@ cc.Class({
             var orientations = [];
             var closeCount = 0;
 
-            var idxV = card.idx[0];
-            var idxH = card.idx[1];
-
-            var idxUp = idxV - 1;
-            var idxDown = idxV + 1;
-            var idxLeft = idxH - 1;
-            var idxRight = idxH + 1;
-
-            //获取上下左右的卡牌状态
-            var upCard = idxUp < 0 ? null : this._mapInfo[idxUp][idxH].node.getComponent('Card');
-            var downCard = idxDown > 3 ? null : this._mapInfo[idxDown][idxH].node.getComponent('Card');
-            var leftCard = idxLeft < 0 ? null : this._mapInfo[idxV][idxLeft].node.getComponent('Card');
-            var rightCard = idxRight > 3 ? null : this._mapInfo[idxV][idxRight].node.getComponent('Card');
-
-            var cardArr = [upCard, downCard, leftCard, rightCard];
+            var cardArr = this.getUpDownLeftRightCard(card);
             for (var i = 0; i < cardArr.length; i++) {
                 var item = cardArr[i];
                 if (item) {
                     var compareValue = this.compareCard(card, item);
-                    if (compareValue > 0) {
+                    if (compareValue == 1 || compareValue == 2) {
                         orientations.push(gameConst.MoveType.Open);
-                    } else if (compareValue == 0) {
+                    } else if (compareValue == -1) {
                         orientations.push(gameConst.MoveType.Close);
                         closeCount++;
                     } else {
@@ -244,12 +379,81 @@ cc.Class({
             event.target.scale = 1.1;
             event.target.setLocalZOrder(99);
             card.showCanMoveOrientation(orientations);
+            this.selectedCard = card;
         }
 
     },
 
+    gameOver(card) {
+        card.showWinTag(() => {
+            //展示结束面板
+
+        });
+    },
+
+    throwTurn(card) {
+        this.gameData.curPlayerType = 3 - this.gameData.curPlayerType;
+        if (this.curCard) {
+            this.curCard.setUpTagVisble(false);
+        }
+        this.curCard = card;
+        this.curCard.setUpTagVisble(true);
+        if (this.gameData.curPlayerType == this.gameData.user.playerType) {
+            //变亮能选择的卡牌
+            for (var i = 0; i < 4; i++) {
+                for (var j = 0; j < 4; j++) {
+                    var cardInfo = this._mapInfo[i][j];
+                    var cardScript = this._mapInfo[i][j].node.getComponent('Card');
+                    if (cardScript.state == gameConst.CardState.CardBack) {
+                        cardScript.setCanSelectState(true);
+                    } else if (cardScript.state == gameConst.CardState.CardFace &&
+                        cardScript.cardType == this.gameData.curPlayerType) {
+                        cardScript.setCanSelectState(true);
+                    } else {
+                        cardScript.setCanSelectState(false);
+                    }
+                }
+            }
+            this.showToast('你的回合');
+        } else {
+            //变暗所有卡牌
+            for (var i = 0; i < 4; i++) {
+                for (var j = 0; j < 4; j++) {
+                    var cardInfo = this._mapInfo[i][j];
+                    var cardScript = this._mapInfo[i][j].node.getComponent('Card');
+                    cardScript.setCanSelectState(false);
+                }
+            }
+            this.showToast('对手的回合');
+        }
+    },
+
+    getUpDownLeftRightCard(card) {
+        var idxV = card.idx[0];
+        var idxH = card.idx[1];
+
+        var idxUp = idxV - 1;
+        var idxDown = idxV + 1;
+        var idxLeft = idxH - 1;
+        var idxRight = idxH + 1;
+
+        //获取上下左右的卡牌状态
+        var upCard = idxUp < 0 ? null : this._mapInfo[idxUp][idxH].node.getComponent('Card');
+        var downCard = idxDown > 3 ? null : this._mapInfo[idxDown][idxH].node.getComponent('Card');
+        var leftCard = idxLeft < 0 ? null : this._mapInfo[idxV][idxLeft].node.getComponent('Card');
+        var rightCard = idxRight > 3 ? null : this._mapInfo[idxV][idxRight].node.getComponent('Card');
+
+        var cardArr = [upCard, downCard, leftCard, rightCard];
+        return cardArr;
+    },
+
     /**
      * card1 与 card2 比较
+     * -1 不可通行
+     * 0 一样大
+     * 1 可通行
+     * 2 可吃
+     * 3 被吃
      * @param card1 
      * @param card2 
      */
@@ -262,14 +466,25 @@ cc.Class({
             return 1;
         } else if (card2.state == gameConst.CardState.CardBack
             || card2.cardType == card1.cardType) {
-            return 0;
+            return -1;
         } else {
-            if (card2.cardValue >= card1.cardValue ||
-                (card2.cardValue == gameConst.AnimalType.Shu &&
-                    card1.cardValue == gameConst.AnimalType.Xiang)) {
-                return -1;
+            if (card2.cardValue > card1.cardValue) {
+                if (card2.cardValue == gameConst.AnimalType.Xiang &&
+                    card1.cardValue == gameConst.AnimalType.Shu) {
+                    //鼠吃象
+                    return 2;
+                }
+                return 3;
+            } else if (card2.cardValue == card1.cardValue) {
+                //拼了
+                return 0;
             } else {
-                return 1;
+                if (card2.cardValue == gameConst.AnimalType.Shu &&
+                    card1.cardValue == gameConst.AnimalType.Xiang) {
+                    //鼠吃象
+                    return 3;
+                }
+                return 2;
             }
         }
     },
@@ -295,7 +510,7 @@ cc.Class({
                         this.gameData.state = gameConst.GameState.Gaming;
                     });
                 } else {
-                    toast.show('对手的回合', ()=>{
+                    toast.show('对手的回合', () => {
                         this.gameData.state = gameConst.GameState.Gaming;
                     });
                 }
