@@ -299,8 +299,7 @@ cc.Class({
     },
 
     gameOver(card) {
-
-
+        card.setCardState(gameConst.CardState.CardFace);
         card.showWinTag(() => {
             //展示结束面板
 
@@ -462,6 +461,38 @@ cc.Class({
         });
     },
 
+    isGameOver() {
+        var validCard = [];
+        var blueCount = 0;
+        var redCount = 0;
+        for (var i = 0; i < 4; i++) {
+            for (var j = 0; j < 4; j++) {
+                var cardInfo = this._mapInfo[i][j];
+                var cardScript = this._mapInfo[i][j].node.getComponent('Card');
+
+                if (cardScript.state == gameConst.CardState.CardBack) {
+                    return { over: false };
+                }
+
+                if (cardScript.state == gameConst.CardState.Invalid) {
+                    if (cardScript.cardType == gameConst.PlayerType.Red) {
+                        redCount++;
+                    } else {
+                        blueCount++;
+                    }
+                } else {
+                    validCard.push(cardScript);
+                }
+            }
+        }
+        //游戏结束
+        if (redCount == 8 || blueCount == 8) {
+            this.gameData.state = gameConst.GameState.End;
+            return { over: true, validCard: validCard };
+        }
+        return { over: false };
+    },
+
     registerEvent() {
         this.node.on('gameStart', (event) => {
             this.gameStart();
@@ -469,7 +500,15 @@ cc.Class({
         this.node.on('openCard', (event) => {
             var card = this._mapInfo[event.detail.cardIdx[0]][event.detail.cardIdx[1]].node.getComponent('Card');
             card.shake((() => {
-                this.throwTurn(card);
+
+                var overIfo = this.isGameOver.bind(this)()
+                if (overIfo.over) {
+                    var winCard = card;
+                    this.node.emit('gameOver', { cardIdx: winCard.idx });
+                }else{
+                    this.throwTurn(card);
+                }
+                
             }));
         });
         this.node.on('moveCard', (event) => {
@@ -502,33 +541,6 @@ cc.Class({
                     });
                 }
 
-                var isGameOver = function () {
-                    var validCard = [];
-                    var blueCount = 0;
-                    var redCount = 0;
-                    for (var i = 0; i < 4; i++) {
-                        for (var j = 0; j < 4; j++) {
-                            var cardInfo = this._mapInfo[i][j];
-                            var cardScript = this._mapInfo[i][j].node.getComponent('Card');
-                            if (cardScript.state == gameConst.CardState.Invalid) {
-                                if (cardScript.cardType == gameConst.PlayerType.Red) {
-                                    redCount++;
-                                } else {
-                                    blueCount++;
-                                }
-                            } else {
-                                validCard.push(cardScript);
-                            }
-                        }
-                    }
-                    //游戏结束
-                    if (redCount == 8 || blueCount == 8) {
-                        this.gameData.state = gameConst.GameState.End;
-                        return { over: true, validCard: validCard };
-                    }
-                    return { over: false };
-                }
-
                 var winCard = null;
 
                 if (compareValue == 3) {
@@ -536,7 +548,7 @@ cc.Class({
                     selectedCard.node.position = pos;
                     animationPos = card.node.position;
 
-                    var overIfo = isGameOver.bind(this)()
+                    var overIfo = this.isGameOver.bind(this)()
                     if (overIfo.over) {
                         winCard = card;
                     }
@@ -546,7 +558,7 @@ cc.Class({
                     selectedCard.node.position = pos;
                     animationPos = card.node.position;
 
-                    var overIfo = isGameOver.bind(this)()
+                    var overIfo = this.isGameOver.bind(this)()
                     if (overIfo.over) {
                         if (overIfo.validCard.length > 0) {
                             winCard = overIfo.validCard[0];
@@ -568,7 +580,7 @@ cc.Class({
 
                     animationPos = selectedCard.node.position;
 
-                    var overIfo = isGameOver.bind(this)()
+                    var overIfo = this.isGameOver.bind(this)()
                     if (overIfo.over) {
                         winCard = selectedCard;
                     }

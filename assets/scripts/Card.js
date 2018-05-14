@@ -107,14 +107,17 @@ cc.Class({
         var orientation = this.node.getChildByName('orientation');
         orientation.active = false;
         this.upTag.active = false;
-        this.winTag.active = true;
-        this.node.runAction(cc.sequence(
-            cc.spawn(cc.moveTo(0.3, cc.v2(0, 0)), cc.scaleTo(0.3, 1.5)),
-            cc.callFunc(() => {
-                if (callback) {
-                    callback();
-                }
-            })));
+        this.selectTag.active = false;
+        UILoader.setSpriteFrame(this.winTag, 'image/word_win_'+this.cardType, ()=>{
+            this.winTag.active = true;
+            this.node.runAction(cc.sequence(
+                cc.spawn(cc.moveTo(0.3, cc.v2(0, 0)), cc.scaleTo(0.3, 1.5)),
+                cc.callFunc(() => {
+                    if (callback) {
+                        callback();
+                    }
+                })));
+        });
     }
 
 

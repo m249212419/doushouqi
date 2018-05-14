@@ -148,7 +148,7 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 820,
+      "width": 1169,
       "height": 1560
     },
     "_rotationX": 0,
@@ -203,7 +203,7 @@
     "_enabled": true,
     "_layoutSize": {
       "__type__": "cc.Size",
-      "width": 820,
+      "width": 1169,
       "height": 1560
     },
     "_resize": 0,
@@ -506,8 +506,8 @@
       "width": 820,
       "height": 1560
     },
-    "_fitWidth": true,
-    "_fitHeight": false
+    "_fitWidth": false,
+    "_fitHeight": true
   },
   {
     "__type__": "c500a5148JN0pjrwi+tHcGp",
