@@ -168,11 +168,15 @@ cc.Class({
         if (this.gameData.state != gameConst.GameState.Gaming) {
             return;
         }
-        // if (this.gameData.curPlayerType != this.gameData.user.playerType) {
-        //     //不是自己的回合,不处理
-        //     this.showToast('对手的回合');
-        //     return;
-        // }
+
+        //双人单机版
+        if (!cc.global.isShuangRenDanJi) {
+            if (this.gameData.curPlayerType != this.gameData.user.playerType) {
+                //不是自己的回合,不处理
+                this.showToast('对手的回合');
+                return;
+            }
+        }
 
         var card = event.target.getComponent('Card');
         //存在选中的牌
@@ -304,6 +308,7 @@ cc.Class({
     },
 
     throwTurn(card) {
+        var that = this;
         this.gameData.curPlayerType = 3 - this.gameData.curPlayerType;
         if (this.curCard) {
             this.curCard.setUpTagVisble(false);
@@ -337,6 +342,11 @@ cc.Class({
                 }
             }
             this.showToast('对手的回合');
+            if (cc.global.isDanRenDanJi) {
+                that.scheduleOnce(() => {
+                    that.startAIAction();
+                }, 1);
+            }
         }
     },
 
@@ -426,7 +436,13 @@ cc.Class({
                 } else {
                     toast.show('对手的回合', () => {
                         this.gameData.state = gameConst.GameState.Gaming;
+                        if (cc.global.isDanRenDanJi) {
+                            that.scheduleOnce(() => {
+                                that.startAIAction();
+                            }, 1);
+                        }
                     });
+
                 }
             });
         });
@@ -540,8 +556,8 @@ cc.Class({
                     }
                 } else {
                     card.node.position = pos;
-                    
-                    if(compareValue == 2){
+
+                    if (compareValue == 2) {
                         card.setCardState(gameConst.CardState.Invalid);
                     }
 
@@ -575,6 +591,129 @@ cc.Class({
             var card = this._mapInfo[event.detail.cardIdx[0]][event.detail.cardIdx[1]].node.getComponent('Card');
             this.gameOver(card);
         });
+    },
+
+    /**
+     * 开始AI动作
+     */
+    startAIAction() {
+        //单人单机玩法
+        if (cc.global.isDanRenDanJi) {
+            //简单AI
+            var canOpenArr = [];
+            var canMoveArr = [];
+            var canChiArr = [];
+            var canPinArr = [];
+            var canDieArr = [];
+
+            for (var i = 0; i < 4; i++) {
+                for (var j = 0; j < 4; j++) {
+                    var cardInfo = this._mapInfo[i][j];
+                    var cardScript = this._mapInfo[i][j].node.getComponent('Card');
+
+                    if (cardScript.state == gameConst.CardState.CardBack) {
+                        canOpenArr.push({ card: cardScript });
+                    }
+                    //AI固定为蓝方
+                    if (cardScript.cardType == gameConst.PlayerType.Blue) {
+                        if (cardScript.state == gameConst.CardState.CardFace) {
+                            var cardArr = this.getUpDownLeftRightCard(cardScript);
+                            for (var k = 0; k < cardArr.length; k++) {
+                                var item = cardArr[k];
+                                if (item) {
+                                    var compareValue = this.compareCard(cardScript, item);
+                                    if (compareValue == 0) {
+                                        canPinArr.push({ card: cardScript, pinCard: item, compareValue: compareValue });
+                                    } else if (compareValue == 1) {
+                                        canMoveArr.push({ card: cardScript, moveCard: item, compareValue: compareValue });
+                                    } else if (compareValue == 2) {
+                                        canChiArr.push({ card: cardScript, chiCard: item, compareValue: compareValue });
+                                    } else if (compareValue == 3) {
+                                        canDieArr.push({ card: cardScript, killerCard: item, compareValue: compareValue });
+                                    }
+                                }
+                            }
+                        }
+
+                    }
+                }
+            }
+            //走能吃的，从最大的吃
+            if (canChiArr.length > 1) {
+                canChiArr.sort(function (a, b) {
+                    if (a.chiCard.cardValue > b.chiCard.cardValue) {
+                        return -1;
+                    }
+                    return 1;
+                });
+            }
+            if (canChiArr.length > 0) {
+                //移动
+                this.node.emit('moveCard', {
+                    selectedIdx: canChiArr[0].card.idx,
+                    moveIdx: canChiArr[0].chiCard.idx,
+                    compareValue: canChiArr[0].compareValue
+                });
+                return;
+            }
+            //走能拼的，从最大的拼
+            if (canPinArr.length > 1) {
+                canPinArr.sort(function (a, b) {
+                    if (a.pinCard.cardValue > b.pinCard.cardValue) {
+                        return -1;
+                    }
+                    return 1;
+                });
+            }
+            if (canPinArr.length > 0) {
+                //移动
+                this.node.emit('moveCard', {
+                    selectedIdx: canPinArr[0].card.idx,
+                    moveIdx: canPinArr[0].pinCard.idx,
+                    compareValue: canPinArr[0].compareValue
+                });
+                return;
+            }
+            //走能走的，随机
+            if (canMoveArr.length > 0) {
+                var idx = Math.random2(0, canMoveArr.length - 1);
+                this.node.emit('moveCard', {
+                    selectedIdx: canMoveArr[idx].card.idx,
+                    moveIdx: canMoveArr[idx].moveCard.idx,
+                    compareValue: canMoveArr[idx].compareValue
+                });
+                return;
+            }
+
+            //翻牌，随机
+            if (canOpenArr.length > 0) {
+                var idx = Math.random2(0, canOpenArr.length - 1);
+                //开牌
+                this.node.emit('openCard', { cardIdx: canOpenArr[idx].card.idx });
+                return;
+            }
+            //从小的开始自杀
+            if (canDieArr.length > 1) {
+                canDieArr.sort(function (a, b) {
+                    if (a.card.cardValue > b.card.cardValue) {
+                        return 1;
+                    }
+                    return -1;
+                });
+            }
+            if (canDieArr.length > 0) {
+                //移动
+                this.node.emit('moveCard', {
+                    selectedIdx: canDieArr[0].card.idx,
+                    moveIdx: canDieArr[0].killerCard.idx,
+                    compareValue: canDieArr[0].compareValue
+                });
+                return;
+            }
+
+        }
+
     }
+
 
 });
