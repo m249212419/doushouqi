@@ -97,12 +97,12 @@
                 } else if (settings.orientation === "portrait") {
                     cc.view.setOrientation(cc.macro.ORIENTATION_PORTRAIT);
                 }
-                // qq, wechat, baidu    
-                // cc.view.enableAutoFullScreen(
-                //     cc.sys.browserType !== cc.sys.BROWSER_TYPE_BAIDU &&
-                //         cc.sys.browserType !== cc.sys.BROWSER_TYPE_WECHAT &&
-                //         cc.sys.browserType !== cc.sys.BROWSER_TYPE_MOBILE_QQ
-                // );
+                    cc.view.enableAutoFullScreen([
+                        cc.sys.BROWSER_TYPE_BAIDU,
+                        cc.sys.BROWSER_TYPE_WECHAT,
+                        cc.sys.BROWSER_TYPE_MOBILE_QQ,
+                        cc.sys.BROWSER_TYPE_MIUI,
+                    ].indexOf(cc.sys.browserType) < 0);
             }
     
             // Limit downloading max concurrent task to 2,
@@ -125,9 +125,6 @@
             var launchScene = settings.launchScene;
     
             // load scene
-            if (cc.runtime) {
-                cc.director.setRuntimeLaunchScene(launchScene);
-            }
             cc.director.loadScene(launchScene, null,
                 function () {
                     if (cc.sys.isBrowser) {
@@ -139,19 +136,18 @@
                         }
                     }
                     cc.loader.onProgress = null;
-    
-                    // play game
-                    // cc.game.resume();
-    
-                    console.log("Success to load scene: " + launchScene);
+                    console.log('Success to load scene: ' + launchScene);
                 }
             );
         };
     
         // jsList
         var jsList = settings.jsList;
-        var bundledScript = settings.debug ? "project.dev.js" : "project.js";
+        var bundledScript = settings.debug ? 'src/project.dev.js' : 'src/project.0adeb.js';
         if (jsList) {
+                jsList = jsList.map(function (x) {
+                    return 'src/' + x;
+                });
             jsList.push(bundledScript);
         } else {
             jsList = [bundledScript];
@@ -159,7 +155,7 @@
     
         // anysdk scripts
         if (cc.sys.isNative && cc.sys.isMobile) {
-            jsList = jsList.concat(["jsb_anysdk.js", "jsb_anysdk_constants.js"]);
+            jsList = jsList.concat(['src/anysdk/jsb_anysdk.js', 'src/anysdk/jsb_anysdk_constants.js']);
         }
     
         // jsList = jsList.map(function (x) {
@@ -193,8 +189,8 @@
     
         var engineLoaded = function () {
             document.body.removeChild(cocos2d);
-            cocos2d.removeEventListener("load", engineLoaded, false);
-            window.eruda && eruda.init();
+            cocos2d.removeEventListener('load', engineLoaded, false);
+            window.eruda && eruda.init() && eruda.get('console').config.set('displayUnenumerable', false);
             boot();
         };
         cocos2d.addEventListener("load", engineLoaded, false);
