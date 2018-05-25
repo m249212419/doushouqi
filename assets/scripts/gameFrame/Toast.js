@@ -3,7 +3,7 @@ var ShowType = cc.Enum({
     FadeOut: 1
 });
 
-const UILoader = require("./UILoader");
+const ResUtils = require("./ResUtils");
 
 cc.Class({
     extends: cc.Component,
@@ -35,7 +35,7 @@ cc.Class({
                 if(callback){
                     callback();
                 }
-                UILoader.destroy(this.node);
+                ResUtils.destroy(this.node);
             })));
     },
 

@@ -1,5 +1,5 @@
 
-const UILoader = require("./gameFrame/UILoader");
+const ResUtils = require("./gameFrame/ResUtils");
 
 var mvs = require('./mactchvs/Mvs')
 var MvsConfig = require('./mactchvs/MvsConfig')
@@ -19,8 +19,6 @@ cc.Class({
             cc.log('开始初始化2')
             if (result !== 0)
                 cc.log('初始化失败,错误码:' + result);
-                else
-                this.initResponse(200);
         } catch (e) {
             cc.log(e);
         }

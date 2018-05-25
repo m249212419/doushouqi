@@ -1,4 +1,4 @@
-const UILoader = require("./gameFrame/UILoader");
+const ResUtils = require("./gameFrame/ResUtils");
 const gameConst = require("GameConst");
 
 cc.Class({
@@ -34,10 +34,10 @@ cc.Class({
         this.cardType = type;
         this.cardValue = value;
         //红蓝类型
-        UILoader.setSpriteFrame(this.node, "image/bg_item_" + type);
+        ResUtils.setSpriteFrame(this.node, "image/bg_item_" + type);
         //动物类型、名称
-        UILoader.setSpriteFrame(this.animal, 'image/animal_' + value);
-        UILoader.setSpriteFrame(this.animalName, `image/name_${type}_${value}`);
+        ResUtils.setSpriteFrame(this.animal, 'image/animal_' + value);
+        ResUtils.setSpriteFrame(this.animalName, `image/name_${type}_${value}`);
     },
 
     setCardState(state) {
@@ -68,7 +68,7 @@ cc.Class({
                 //value: 0--隐藏 1--显示绿色 2--显示红色
                 var value = orientations[idx];
                 if (value > 0) {
-                    UILoader.setSpriteFrame(node, 'image/jiantou_' + value);
+                    ResUtils.setSpriteFrame(node, 'image/jiantou_' + value);
                     node.active = true;
                 } else {
                     node.active = false;
@@ -108,7 +108,7 @@ cc.Class({
         orientation.active = false;
         this.upTag.active = false;
         this.selectTag.active = false;
-        UILoader.setSpriteFrame(this.winTag, 'image/word_win_'+this.cardType, ()=>{
+        ResUtils.setSpriteFrame(this.winTag, 'image/word_win_'+this.cardType, ()=>{
             this.winTag.active = true;
             this.node.runAction(cc.sequence(
                 cc.spawn(cc.moveTo(0.3, cc.v2(0, 0)), cc.scaleTo(0.3, 1.5)),

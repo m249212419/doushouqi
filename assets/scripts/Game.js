@@ -1,4 +1,4 @@
-const UILoader = require("./gameFrame/UILoader");
+const ResUtils = require("./gameFrame/ResUtils");
 const gameConst = require("GameConst");
 
 cc.Class({
@@ -97,25 +97,25 @@ cc.Class({
         var user2 = this.header.getChildByName('info2');
         //头像框颜色设置
         var headFrame1 = user1.getChildByName('head_frame');
-        UILoader.setSpriteFrame(headFrame1, "image/head_" + gameConst.PlayerType.Red);
+        ResUtils.setSpriteFrame(headFrame1, "image/head_" + gameConst.PlayerType.Red);
 
         var headFrame2 = user2.getChildByName('head_frame');
-        UILoader.setSpriteFrame(headFrame2, "image/head_" + gameConst.PlayerType.Blue);
+        ResUtils.setSpriteFrame(headFrame2, "image/head_" + gameConst.PlayerType.Blue);
 
         //头像
         var head1 = user1.getChildByName('head').getChildByName('image');
-        UILoader.setSpriteFrame(head1, "image/animal_" + Math.random2(1, 8));
+        ResUtils.setSpriteFrame(head1, "image/animal_" + Math.random2(1, 8));
 
         var head2 = user2.getChildByName('head').getChildByName('image');
-        UILoader.setSpriteFrame(head2, "image/animal_" + Math.random2(1, 8));
+        ResUtils.setSpriteFrame(head2, "image/animal_" + Math.random2(1, 8));
 
         //名称、性别
         var name1 = user1.getChildByName('name').getComponent(cc.Label);
         var name2 = user2.getChildByName('name').getComponent(cc.Label);
         name1.string = '自己';
         name2.string = '电脑';
-        UILoader.setSpriteFrame(user1.getChildByName('sex'), "image/sex_" + Math.random2(1, 2));
-        UILoader.setSpriteFrame(user2.getChildByName('sex'), "image/sex_" + Math.random2(1, 2));
+        ResUtils.setSpriteFrame(user1.getChildByName('sex'), "image/sex_" + Math.random2(1, 2));
+        ResUtils.setSpriteFrame(user2.getChildByName('sex'), "image/sex_" + Math.random2(1, 2));
     },
 
     /**
@@ -416,9 +416,9 @@ cc.Class({
     showFisrtToast() {
         var that = this;
         var playerType = this.gameData.curPlayerType;
-        UILoader.instantiate("prefabs/gameToast", (node) => {
+        ResUtils.instantiate("prefabs/gameToast", (node) => {
             var toast = node.getComponent('Toast');
-            UILoader.setSpriteFrame(toast.node, "image/bg_toast_" + playerType, (node) => {
+            ResUtils.setSpriteFrame(toast.node, "image/bg_toast_" + playerType, (node) => {
                 that.node.addChild(node);
                 if (this.gameData.user.playerType == playerType) {
                     toast.show('你的回合', () => {
@@ -450,9 +450,9 @@ cc.Class({
 
     showToast(content) {
         var that = this;
-        UILoader.instantiate("prefabs/gameToast", (node) => {
+        ResUtils.instantiate("prefabs/gameToast", (node) => {
             var toast = node.getComponent('Toast');
-            UILoader.setSpriteFrame(toast.node,
+            ResUtils.setSpriteFrame(toast.node,
                 "image/bg_toast_" + this.gameData.curPlayerType,
                 (node) => {
                     that.node.addChild(node);
@@ -532,11 +532,11 @@ cc.Class({
             selectedCard.moveToPos(card.node.position, () => {
 
                 if (compareValue != 1) {
-                    UILoader.instantiate("prefabs/animal_die", (node) => {
+                    ResUtils.instantiate("prefabs/animal_die", (node) => {
                         node.position = animationPos;
                         this.mapNode.addChild(node);
                         node.runAction(cc.sequence(cc.delayTime(0.5), cc.callFunc(() => {
-                            UILoader.destroy(node);
+                            ResUtils.destroy(node);
                         })));
                     });
                 }

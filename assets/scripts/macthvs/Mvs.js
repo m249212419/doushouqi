@@ -5,7 +5,7 @@ try {
 } catch (e) {
     try {
         var jsMatchvs;
-        if (wx && wx.connectSocket) {
+        if (window.wx && window.wx.connectSocket) {
             jsMatchvs = require("matchvs.all.weixin");
         } else {
             jsMatchvs = require("matchvs.all");
