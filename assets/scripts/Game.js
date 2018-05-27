@@ -1,5 +1,8 @@
 const ResUtils = require("./gameFrame/ResUtils");
-const gameConst = require("GameConst");
+const GameConst = require("GameConst");
+
+const mvs = require('./macthvs/Mvs')
+const MvsConfig = require('./macthvs/MvsConfig')
 
 cc.Class({
     extends: cc.Component,
@@ -29,6 +32,54 @@ cc.Class({
         this.initMapData();
         //注册事件监听
         this.registerEvent();
+
+        if (cc.global.isLianwang) {
+            mvs.response.sendEventNotify = this.sendEventNotify.bind(this);
+        }
+
+    },
+
+    sendEventNotify: function (info) {
+        if (info && info.cpProto) {
+            var data = JSON.parse(info.cpProto).data;
+            if (info.cpProto.indexOf('openCard') >= 0) {
+                this.node.emit('openCard', data);
+            } else if (info.cpProto.indexOf('moveCard') >= 0) {
+                this.node.emit('moveCard', data);
+            } else if (info.cpProto.indexOf('gameOver') >= 0) {
+                this.node.emit('gameOver', data);
+            } else if (info.cpProto.indexOf('ready') >= 0) {
+                if (!this.readyPlayers) {
+                    this.readyPlayers = [];
+                }
+
+                if (this.readyPlayers.indexOf(data.userId) < 0) {
+                    this.readyPlayers.push(data.userId);
+                    //只有房主才能开始游戏
+                    if (this.readyPlayers.length == 2 && cc.global.isRoomOwner) {
+                        var cardData = GameConst.getCardData();
+                        cardData.shuffle();
+                        var eventData = {
+                            firstPlayerType: Math.random2(1, 2),
+                            cardData: cardData
+                        };
+
+                        cc.global.firstPlayerType = eventData.firstPlayerType;
+                        cc.global.cardData = eventData.cardData;
+
+                        this.node.emit('gameStart');
+                        this.sendMvsEvent('reStart', eventData);
+                    }
+                }
+            } else if (info.cpProto.indexOf('reStart') >= 0) {
+
+                cc.global.firstPlayerType = data.firstPlayerType;
+                cc.global.cardData = data.cardData;
+
+                this.node.emit('gameStart');
+            }
+            delete cc.global.events[info.sequence];
+        }
     },
 
     start() {
@@ -52,7 +103,7 @@ cc.Class({
                     node: cardNode, //每次移动后交换node，其他数据只做初始化使用
                     idx: [i, j],
                     initPos: cardNode.position,
-                    state: gameConst.CardState.CardBack,
+                    state: GameConst.CardState.CardBack,
                     type: 0,
                     value: 0,
                 };
@@ -65,17 +116,23 @@ cc.Class({
      * 游戏开始
      */
     gameStart() {
-        this.gameData.state = gameConst.GameState.Start;
+        this.gameData.state = GameConst.GameState.Start;
         //设置玩家信息
         this.setPlayerInfo();
         //重置卡牌数据
         this.resetCardData();
         //随机先手玩家
-        this.gameData.curPlayerType = Math.random2(1, 2);
+        if (cc.global.isLianwang) {
+            this.gameData.curPlayerType = cc.global.firstPlayerType;
+        } else {
+            this.gameData.curPlayerType = Math.random2(1, 2);
+        }
+
         this.showFisrtToast();
 
         this.selectedCard = null;
         this.curCard = null;
+        this.readyPlayers = [];
 
     },
 
@@ -86,43 +143,103 @@ cc.Class({
         //双方阵营数据
         this.gameData.user = {};
         this.gameData.other = {};
-        //设置双方颜色阵营
-        this.gameData.user.playerType = gameConst.PlayerType.Red;
-        this.gameData.other.playerType = gameConst.PlayerType.Blue;
+
         //对战信息背景
         var bg = this.header.getChildByName('bg');
-        bg.scaleX = 1;
         //对战信息显示
         var user1 = this.header.getChildByName('info1');
         var user2 = this.header.getChildByName('info2');
-        //头像框颜色设置
-        var headFrame1 = user1.getChildByName('head_frame');
-        ResUtils.setSpriteFrame(headFrame1, "image/head_" + gameConst.PlayerType.Red);
 
-        var headFrame2 = user2.getChildByName('head_frame');
-        ResUtils.setSpriteFrame(headFrame2, "image/head_" + gameConst.PlayerType.Blue);
+        if (cc.global.isLianwang) {
 
-        //头像
-        var head1 = user1.getChildByName('head').getChildByName('image');
-        ResUtils.setSpriteFrame(head1, "image/animal_" + Math.random2(1, 8));
+            cc.global.playerUserList.forEach((userInfo) => {
+                if (userInfo.userId == cc.global.userInfo.id) {
+                    this.gameData.user.userId = userInfo.userId;
+                    this.gameData.user.playerType = userInfo.playerType;
 
-        var head2 = user2.getChildByName('head').getChildByName('image');
-        ResUtils.setSpriteFrame(head2, "image/animal_" + Math.random2(1, 8));
+                    if (userInfo.playerType == GameConst.PlayerType.Blue) {
+                        bg.scaleX = -1;
+                    } else {
+                        bg.scaleX = 1;
+                    }
+                    var headFrame1 = user1.getChildByName('head_frame');
+                    ResUtils.setSpriteFrame(headFrame1, "image/head_" + userInfo.playerType);
+                    var head1 = user1.getChildByName('head').getChildByName('image');
+                    ResUtils.setSpriteFrame(head1, "image/animal_" + userInfo.head);
 
-        //名称、性别
-        var name1 = user1.getChildByName('name').getComponent(cc.Label);
-        var name2 = user2.getChildByName('name').getComponent(cc.Label);
-        name1.string = '自己';
-        name2.string = '电脑';
-        ResUtils.setSpriteFrame(user1.getChildByName('sex'), "image/sex_" + Math.random2(1, 2));
-        ResUtils.setSpriteFrame(user2.getChildByName('sex'), "image/sex_" + Math.random2(1, 2));
+                    var name1 = user1.getChildByName('name').getComponent(cc.Label);
+                    name1.string = userInfo.name;
+
+                    ResUtils.setSpriteFrame(user1.getChildByName('sex'), "image/sex_" + userInfo.sex);
+                } else {
+                    this.gameData.other.userId = userInfo.userId;
+                    this.gameData.other.playerType = userInfo.playerType;
+                    var headFrame2 = user2.getChildByName('head_frame');
+                    ResUtils.setSpriteFrame(headFrame2, "image/head_" + userInfo.playerType);
+                    var head2 = user2.getChildByName('head').getChildByName('image');
+                    ResUtils.setSpriteFrame(head2, "image/animal_" + userInfo.head);
+
+                    var name2 = user2.getChildByName('name').getComponent(cc.Label);
+                    name2.string = userInfo.name;
+
+                    ResUtils.setSpriteFrame(user2.getChildByName('sex'), "image/sex_" + userInfo.sex);
+                }
+
+            });
+
+        } else {
+            //设置双方颜色阵营
+            this.gameData.user.playerType = GameConst.PlayerType.Red;
+            this.gameData.other.playerType = GameConst.PlayerType.Blue;
+            //对战信息背景
+            bg.scaleX = 1;
+            //对战信息显示
+            var user1 = this.header.getChildByName('info1');
+            var user2 = this.header.getChildByName('info2');
+            //头像框颜色设置
+            var headFrame1 = user1.getChildByName('head_frame');
+            ResUtils.setSpriteFrame(headFrame1, "image/head_" + GameConst.PlayerType.Red);
+
+            var headFrame2 = user2.getChildByName('head_frame');
+            ResUtils.setSpriteFrame(headFrame2, "image/head_" + GameConst.PlayerType.Blue);
+
+            //头像
+            var head1 = user1.getChildByName('head').getChildByName('image');
+            ResUtils.setSpriteFrame(head1, "image/animal_" + Math.random2(1, 8));
+
+            var head2 = user2.getChildByName('head').getChildByName('image');
+            ResUtils.setSpriteFrame(head2, "image/animal_" + Math.random2(1, 8));
+
+            //名称、性别
+            var name1 = user1.getChildByName('name').getComponent(cc.Label);
+            var name2 = user2.getChildByName('name').getComponent(cc.Label);
+
+            if (cc.global.isDanRenDanJi) {
+                name1.string = '自己';
+                name2.string = '电脑';
+            } else {
+                name1.string = '红方';
+                name2.string = '蓝方';
+            }
+
+            ResUtils.setSpriteFrame(user1.getChildByName('sex'), "image/sex_" + Math.random2(1, 2));
+            ResUtils.setSpriteFrame(user2.getChildByName('sex'), "image/sex_" + Math.random2(1, 2));
+        }
+
     },
 
     /**
      * 重置卡牌数据
      */
     resetCardData() {
-        var cardData = this.randomCardData();
+
+        var cardData;
+        if (cc.global.isLianwang) {
+            cardData = cc.global.cardData;
+        } else {
+            cardData = this.randomCardData();
+        }
+
         var idx = 0;
         for (var i = 0; i < 4; i++) {
             for (var j = 0; j < 4; j++) {
@@ -130,7 +247,7 @@ cc.Class({
 
                 var cardInfo = this._mapInfo[i][j];
                 var card = cardInfo.node.getComponent('Card');
-                cardInfo.state = gameConst.CardState.CardBack;
+                cardInfo.state = GameConst.CardState.CardBack;
                 //红蓝类型
                 cardInfo.type = parseInt(data / 100);
                 //动物类型、名称
@@ -141,14 +258,14 @@ cc.Class({
                 idx++;
             }
         }
-
+        return cardData;
     },
 
     /**
      * 随机卡牌 数据
      */
     randomCardData() {
-        var cardData = gameConst.getCardData();
+        var cardData = GameConst.getCardData();
         cardData.shuffle();
         return cardData;
     },
@@ -157,7 +274,40 @@ cc.Class({
      * 认输事件
      */
     onRenShuClick() {
-        this.node.emit('gameStart');
+        //临时使用
+        if (!cc.global.isLianwang) {
+            this.node.emit('gameStart');
+        } else {
+            if (!this.readyPlayers) {
+                this.readyPlayers = [];
+            }
+            this.readyPlayers.push(cc.global.userInfo.id);
+
+            //只有房主才能开始游戏
+            if (this.readyPlayers.length == 2 && cc.global.isRoomOwner) {
+
+                var cardData = GameConst.getCardData();
+                cardData.shuffle();
+                var eventData = {
+                    firstPlayerType: Math.random2(1, 2),
+                    cardData: cardData
+                };
+
+                cc.global.firstPlayerType = eventData.firstPlayerType;
+                cc.global.cardData = eventData.cardData;
+
+                this.node.emit('gameStart');
+                this.sendMvsEvent('reStart', eventData);
+            } else {
+                //发送准备消息
+                this.sendMvsEvent('ready', {
+                    userId: cc.global.userInfo.id,
+                });
+            }
+
+
+        }
+
     },
 
     /**
@@ -165,7 +315,7 @@ cc.Class({
      */
     onCardSelect(event) {
 
-        if (this.gameData.state != gameConst.GameState.Gaming) {
+        if (this.gameData.state != GameConst.GameState.Gaming) {
             return;
         }
 
@@ -210,7 +360,7 @@ cc.Class({
             var isValidPos = validPos.bind(this)();
 
             if (isValidPos) {
-                if (card.state == gameConst.CardState.Invalid) {
+                if (card.state == GameConst.CardState.Invalid) {
 
                     /**
                       * 0 一样大
@@ -223,10 +373,17 @@ cc.Class({
                         moveIdx: card.idx,
                         compareValue: 1
                     });
+
+                    this.sendMvsEvent('moveCard', {
+                        selectedIdx: this.selectedCard.idx,
+                        moveIdx: card.idx,
+                        compareValue: 1
+                    });
+
                     return;
                 }
 
-                if (card.state == gameConst.CardState.CardFace
+                if (card.state == GameConst.CardState.CardFace
                     && card.cardType != this.gameData.curPlayerType) {
 
 
@@ -234,6 +391,12 @@ cc.Class({
                     var compareValue = this.compareCard(this.selectedCard, card);
 
                     this.node.emit('moveCard', {
+                        selectedIdx: this.selectedCard.idx,
+                        moveIdx: card.idx,
+                        compareValue: compareValue
+                    });
+
+                    this.sendMvsEvent('moveCard', {
                         selectedIdx: this.selectedCard.idx,
                         moveIdx: card.idx,
                         compareValue: compareValue
@@ -248,20 +411,18 @@ cc.Class({
             return;
         }
 
-        if (card.state == gameConst.CardState.CardFace
+        if (card.state == GameConst.CardState.CardFace
             && card.cardType != this.gameData.curPlayerType) {
             this.showToast('这是对手的牌');
             return;
         }
 
-        if (card.state == gameConst.CardState.CardBack) {
-            // card.shake((() => {
-            //     this.throwTurn(card);
-            // }));
+        if (card.state == GameConst.CardState.CardBack) {
             this.node.emit('openCard', { cardIdx: card.idx });
+            this.sendMvsEvent('openCard', { cardIdx: card.idx });
         }
 
-        if (card.state == gameConst.CardState.CardFace) {
+        if (card.state == GameConst.CardState.CardFace) {
             //判断可移动方位:上下左右
             var orientations = [];
             var closeCount = 0;
@@ -272,15 +433,15 @@ cc.Class({
                 if (item) {
                     var compareValue = this.compareCard(card, item);
                     if (compareValue == 1 || compareValue == 2) {
-                        orientations.push(gameConst.MoveType.Open);
+                        orientations.push(GameConst.MoveType.Open);
                     } else if (compareValue == -1) {
-                        orientations.push(gameConst.MoveType.Close);
+                        orientations.push(GameConst.MoveType.Close);
                         closeCount++;
                     } else {
-                        orientations.push(gameConst.MoveType.Die);
+                        orientations.push(GameConst.MoveType.Die);
                     }
                 } else {
-                    orientations.push(gameConst.MoveType.Close);
+                    orientations.push(GameConst.MoveType.Close);
                     closeCount++;
                 }
             }
@@ -299,7 +460,7 @@ cc.Class({
     },
 
     gameOver(card) {
-        card.setCardState(gameConst.CardState.CardFace);
+        card.setCardState(GameConst.CardState.CardFace);
         card.showWinTag(() => {
             //展示结束面板
 
@@ -320,9 +481,9 @@ cc.Class({
                 for (var j = 0; j < 4; j++) {
                     var cardInfo = this._mapInfo[i][j];
                     var cardScript = this._mapInfo[i][j].node.getComponent('Card');
-                    if (cardScript.state == gameConst.CardState.CardBack) {
+                    if (cardScript.state == GameConst.CardState.CardBack) {
                         cardScript.setCanSelectState(true);
-                    } else if (cardScript.state == gameConst.CardState.CardFace &&
+                    } else if (cardScript.state == GameConst.CardState.CardFace &&
                         cardScript.cardType == this.gameData.curPlayerType) {
                         cardScript.setCanSelectState(true);
                     } else {
@@ -383,15 +544,15 @@ cc.Class({
             return -1;
         }
         //无效状态
-        if (card2.state == gameConst.CardState.Invalid) {
+        if (card2.state == GameConst.CardState.Invalid) {
             return 1;
-        } else if (card2.state == gameConst.CardState.CardBack
+        } else if (card2.state == GameConst.CardState.CardBack
             || card2.cardType == card1.cardType) {
             return -1;
         } else {
             if (card2.cardValue > card1.cardValue) {
-                if (card2.cardValue == gameConst.AnimalType.Xiang &&
-                    card1.cardValue == gameConst.AnimalType.Shu) {
+                if (card2.cardValue == GameConst.AnimalType.Xiang &&
+                    card1.cardValue == GameConst.AnimalType.Shu) {
                     //鼠吃象
                     return 2;
                 }
@@ -400,8 +561,8 @@ cc.Class({
                 //拼了
                 return 0;
             } else {
-                if (card2.cardValue == gameConst.AnimalType.Shu &&
-                    card1.cardValue == gameConst.AnimalType.Xiang) {
+                if (card2.cardValue == GameConst.AnimalType.Shu &&
+                    card1.cardValue == GameConst.AnimalType.Xiang) {
                     //鼠吃象
                     return 3;
                 }
@@ -430,11 +591,11 @@ cc.Class({
                                 card.setCanSelectState(true);
                             }
                         }
-                        this.gameData.state = gameConst.GameState.Gaming;
+                        this.gameData.state = GameConst.GameState.Gaming;
                     });
                 } else {
                     toast.show('对手的回合', () => {
-                        this.gameData.state = gameConst.GameState.Gaming;
+                        this.gameData.state = GameConst.GameState.Gaming;
                         if (cc.global.isDanRenDanJi) {
                             that.scheduleOnce(() => {
                                 that.startAIAction();
@@ -470,12 +631,12 @@ cc.Class({
                 var cardInfo = this._mapInfo[i][j];
                 var cardScript = this._mapInfo[i][j].node.getComponent('Card');
 
-                if (cardScript.state == gameConst.CardState.CardBack) {
+                if (cardScript.state == GameConst.CardState.CardBack) {
                     return { over: false };
                 }
 
-                if (cardScript.state == gameConst.CardState.Invalid) {
-                    if (cardScript.cardType == gameConst.PlayerType.Red) {
+                if (cardScript.state == GameConst.CardState.Invalid) {
+                    if (cardScript.cardType == GameConst.PlayerType.Red) {
                         redCount++;
                     } else {
                         blueCount++;
@@ -487,7 +648,7 @@ cc.Class({
         }
         //游戏结束
         if (redCount == 8 || blueCount == 8) {
-            this.gameData.state = gameConst.GameState.End;
+            this.gameData.state = GameConst.GameState.End;
             return { over: true, validCard: validCard };
         }
         return { over: false };
@@ -505,10 +666,11 @@ cc.Class({
                 if (overIfo.over) {
                     var winCard = card;
                     this.node.emit('gameOver', { cardIdx: winCard.idx });
-                }else{
+                    this.sendMvsEvent('gameOver', { cardIdx: winCard.idx });
+                } else {
                     this.throwTurn(card);
                 }
-                
+
             }));
         });
         this.node.on('moveCard', (event) => {
@@ -544,7 +706,7 @@ cc.Class({
                 var winCard = null;
 
                 if (compareValue == 3) {
-                    selectedCard.setCardState(gameConst.CardState.Invalid);
+                    selectedCard.setCardState(GameConst.CardState.Invalid);
                     selectedCard.node.position = pos;
                     animationPos = card.node.position;
 
@@ -553,8 +715,8 @@ cc.Class({
                         winCard = card;
                     }
                 } else if (compareValue == 0) {
-                    selectedCard.setCardState(gameConst.CardState.Invalid);
-                    card.setCardState(gameConst.CardState.Invalid);
+                    selectedCard.setCardState(GameConst.CardState.Invalid);
+                    card.setCardState(GameConst.CardState.Invalid);
                     selectedCard.node.position = pos;
                     animationPos = card.node.position;
 
@@ -570,7 +732,7 @@ cc.Class({
                     card.node.position = pos;
 
                     if (compareValue == 2) {
-                        card.setCardState(gameConst.CardState.Invalid);
+                        card.setCardState(GameConst.CardState.Invalid);
                     }
 
                     [this._mapInfo[card.idx[0]][card.idx[1]].node,
@@ -623,12 +785,12 @@ cc.Class({
                     var cardInfo = this._mapInfo[i][j];
                     var cardScript = this._mapInfo[i][j].node.getComponent('Card');
 
-                    if (cardScript.state == gameConst.CardState.CardBack) {
+                    if (cardScript.state == GameConst.CardState.CardBack) {
                         canOpenArr.push({ card: cardScript });
                     }
                     //AI固定为蓝方
-                    if (cardScript.cardType == gameConst.PlayerType.Blue) {
-                        if (cardScript.state == gameConst.CardState.CardFace) {
+                    if (cardScript.cardType == GameConst.PlayerType.Blue) {
+                        if (cardScript.state == GameConst.CardState.CardFace) {
                             var cardArr = this.getUpDownLeftRightCard(cardScript);
                             for (var k = 0; k < cardArr.length; k++) {
                                 var item = cardArr[k];
@@ -725,7 +887,25 @@ cc.Class({
 
         }
 
+    },
+
+    sendMvsEvent(eventCode, data) {
+        if (cc.global.isLianwang) {
+            var event = {
+                action: eventCode,
+                data: data
+            };
+
+            var result = mvs.engine.sendEvent(JSON.stringify(event));
+            if (result.result !== 0) {
+                cc.log('发送消息失败，错误码' + result.result)
+                return;
+            }
+            cc.global.events[result.sequence] = event;
+        }
     }
+
+
 
 
 });

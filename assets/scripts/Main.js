@@ -1,8 +1,9 @@
 
 const ResUtils = require("./gameFrame/ResUtils");
+const GameConst = require("GameConst");
 
-var mvs = require('./mactchvs/Mvs')
-var MvsConfig = require('./mactchvs/MvsConfig')
+const mvs = require('./macthvs/Mvs')
+const MvsConfig = require('./macthvs/MvsConfig')
 
 cc.Class({
     extends: cc.Component,
@@ -31,8 +32,20 @@ cc.Class({
         };
     },
 
+
+    onDanjiStart1(event){
+        cc.global.isDanRenDanJi = true;
+        this.startGame();
+    },
+
+    onDanjiStart2(event){
+        cc.global.isShuangRenDanJi = true;
+        this.startGame();
+    },
+
     onStartGame(event) {
         cc.log('开始进入房间');
+        cc.global.isLianwang = true;
         mvs.response.joinRoomResponse = this.joinRoomResponse.bind(this);
         var result = mvs.engine.joinRandomRoom(MvsConfig.MAX_PLAYER_COUNT, '')
         if (result !== 0)
@@ -40,8 +53,6 @@ cc.Class({
     },
 
     startGame() {
-        // cc.global.isShuangRenDanJi = true;
-        cc.global.isDanRenDanJi = true;
         var loading = this.loading.getComponent('Loading');
         loading.loadScene("game");
         this.loading.active = true;
@@ -93,7 +104,10 @@ cc.Class({
         }
 
         var userIds = [cc.global.userInfo.id]
-        userInfoList.forEach(function (item) { if (cc.global.userInfo.id !== item.userId) userIds.push(item.userId) });
+        userInfoList.forEach(function (item) { 
+            if (cc.global.userInfo.id !== item.userId)
+                userIds.push(item.userId);
+        });
         cc.log('房间用户: ' + userIds);
 
         mvs.response.sendEventNotify = this.sendEventNotify.bind(this); // 设置事件接收的回调
@@ -121,10 +135,33 @@ cc.Class({
     notifyGameStart: function () {
         cc.global.isRoomOwner = true;
 
+        var cardData = GameConst.getCardData();
+        cardData.shuffle();
         var event = {
             action: MvsConfig.Event.GAME_START_EVENT,
-            userIds: MvsConfig.playerUserIds
+            userInfoList: [
+            {
+                userId: cc.global.playerUserIds[0],
+                name: '大王',
+                head: Math.random2(1, 8),
+                sex: Math.random2(1, 2),
+                playerType: GameConst.PlayerType.Red
+                
+            }, 
+            {
+                userId: cc.global.playerUserIds[1],
+                name: '小王',
+                head: Math.random2(1, 8),
+                sex: Math.random2(1, 2),
+                playerType: GameConst.PlayerType.Blue
+            }],
+            firstPlayerType: Math.random2(1, 2),
+            cardData: cardData
         };
+
+        cc.global.playerUserList = event.userInfoList;
+        cc.global.firstPlayerType = event.firstPlayerType;
+        cc.global.cardData = event.cardData;
 
         mvs.response.sendEventResponse = this.sendEventResponse.bind(this); // 设置事件发射之后的回调
         var result = mvs.engine.sendEvent(JSON.stringify(event));
@@ -150,7 +187,7 @@ cc.Class({
 
         if (event && event.action === MvsConfig.Event.GAME_START_EVENT) {
             delete cc.global.events[info.sequence]
-            this.startGame()
+            this.startGame();
         }
     },
 
@@ -159,13 +196,12 @@ cc.Class({
             && info.cpProto
             && info.cpProto.indexOf(MvsConfig.Event.GAME_START_EVENT) >= 0) {
 
-            cc.global.playerUserIds = [cc.global.userInfo.id]
-            // 通过游戏开始的玩家会把userIds传过来，这里找出所有除本玩家之外的用户ID，
-            // 添加到全局变量playerUserIds中
-            JSON.parse(info.cpProto).userIds.forEach(function (userId) {
-                if (userId !== cc.global.userInfo.id) cc.global.playerUserIds.push(userId)
-            });
-            this.startGame()
+            var event = JSON.parse(info.cpProto);
+            cc.global.playerUserList = event.userInfoList;
+            cc.global.firstPlayerType = event.firstPlayerType;
+            cc.global.cardData = event.cardData;
+            
+            this.startGame();
         }
     },
 

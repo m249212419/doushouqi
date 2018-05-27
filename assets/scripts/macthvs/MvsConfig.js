@@ -4,7 +4,7 @@ var _Config = {
 
     Event: {
         GAME_START_EVENT: "gameStart",
-        NEW_START_EVENT: "newStar",
+        OPEN_CARD: "openCard",
         PLAYER_MOVE_EVENT: "playerMove",
         GAIN_SCORE_EVENT: "gainScore",
         PLAYER_POSITION_EVENT: "playerPosition",
